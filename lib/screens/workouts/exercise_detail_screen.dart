@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../models/fitness_models.dart';
+import 'workout_complete_screen.dart';
 
 class ExerciseDetailScreen extends StatefulWidget {
   final Exercise exercise;
@@ -14,47 +15,299 @@ class ExerciseDetailScreen extends StatefulWidget {
 
 class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
   int _activeSet = 1;
-  int _weight = 35;
-  int _reps = 8;
-  bool _isKg = true;
-
-  bool _isNotesExpanded = false;
-  Set<int> _completedSets = {};
+  late int _totalSets;
   
-  int _restSecondsRemaining = 0;
-  Timer? _restTimer;
+  final TextEditingController _weightController = TextEditingController(text: '4.5');
+  final TextEditingController _repsController = TextEditingController(text: '8-10');
+
+  bool _isNotesExpanded = true;
+  final Set<int> _completedSets = {};
+  
+  bool _restTimerEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _totalSets = widget.exercise.sets;
+  }
 
   @override
   void dispose() {
-    _restTimer?.cancel();
+    _weightController.dispose();
+    _repsController.dispose();
     super.dispose();
   }
-
-  void _startRestTimer() {
-    _restTimer?.cancel();
-    setState(() {
-      _restSecondsRemaining = 3 * 60; // 3 minutes
-    });
-    _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_restSecondsRemaining > 0) {
-        setState(() {
-          _restSecondsRemaining--;
-        });
-      } else {
-        timer.cancel();
+  
+  void _showWorkoutOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 8),
+                  Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(2))),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    title: const Text('Complete Workout', style: TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.check_circle, color: Color(0xFF121B28)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _navigateToComplete();
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    title: const Text('End Workout', style: TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: const Icon(Icons.output_rounded, color: Color(0xFF121B28)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.popUntil(context, (route) => route.isFirst);
+                    },
+                  ),
+                  const Divider(height: 1),
+                  SwitchListTile(
+                    title: const Text('Rest timer', style: TextStyle(fontWeight: FontWeight.w600)),
+                    value: _restTimerEnabled,
+                    activeColor: Theme.of(context).primaryColor,
+                    onChanged: (val) {
+                      setModalState(() { _restTimerEnabled = val; });
+                      setState(() { _restTimerEnabled = val; });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.85),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                        ),
+                        child: const Text('DONE', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          }
+        );
       }
+    );
+  }
+
+  void _showSetOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.add),
+              title: const Text('Add Set'),
+              onTap: () {
+                setState(() => _totalSets++);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.remove),
+              title: const Text('Remove Set'),
+              onTap: () {
+                if (_totalSets > 1) {
+                  setState(() {
+                    _totalSets--;
+                    if (_activeSet > _totalSets) _activeSet = _totalSets;
+                  });
+                }
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showHelpBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.8,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              color: Colors.white,
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(24),
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Help', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF121B28))),
+                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(widget.exercise.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF121B28))),
+                  const SizedBox(height: 24),
+                  Container(
+                    height: 200,
+                    width: double.infinity,
+                    decoration: BoxDecoration(color: const Color(0xFFFAFAFA), borderRadius: BorderRadius.circular(16)),
+                    child: const Icon(Icons.fitness_center, size: 80, color: Colors.black12),
+                  ),
+                  const SizedBox(height: 32),
+                  _buildInstructionStep(1, 'Lying on an incline bench at 45 degrees, with a dumbbell in each hand with a neutral grip either side of your chest.'),
+                  const SizedBox(height: 24),
+                  _buildInstructionStep(2, 'Push both dumbbells up by straightening your arms, keeping them inline with your chest throughout.'),
+                  const SizedBox(height: 24),
+                  _buildInstructionStep(3, 'Lower them down, elbows by your sides at a 45 degree angle.'),
+                ],
+              ),
+            );
+          }
+        );
+      }
+    );
+  }
+
+  Widget _buildInstructionStep(int step, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24, height: 24,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(color: Color(0xFFEEEEEE), shape: BoxShape.circle),
+          child: Text('$step', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
+        ),
+        const SizedBox(width: 16),
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 15, color: Color(0xFF121B28), height: 1.5, fontWeight: FontWeight.w500))),
+      ],
+    );
+  }
+
+  void _showRestTimerOverlay() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (BuildContext context, _, __) {
+          int seconds = 73; 
+          return StatefulBuilder(
+            builder: (context, setOverlayState) {
+              Timer? t;
+              t = Timer.periodic(const Duration(seconds: 1), (timer) {
+                if (seconds > 0) {
+                  setOverlayState(() => seconds--);
+                } else {
+                  timer.cancel();
+                  if (Navigator.canPop(context)) Navigator.pop(context);
+                }
+              });
+              
+              String formatTime(int s) {
+                final mStr = (s ~/ 60).toString().padLeft(2, '0');
+                final sStr = (s % 60).toString().padLeft(2, '0');
+                return '$mStr:$sStr';
+              }
+              
+              return Scaffold(
+                backgroundColor: Colors.white,
+                body: SafeArea(
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: IconButton(icon: const Icon(Icons.chevron_left, size: 30, color: Color(0xFF121B28)), onPressed: () { t?.cancel(); Navigator.pop(context); }),
+                            ),
+                            const Text('REST', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF121B28), letterSpacing: 1)),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: IconButton(icon: const Icon(Icons.more_horiz, color: Color(0xFF121B28)), onPressed: (){}),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 24),
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor.withOpacity(0.85), 
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('REST', style: TextStyle(color: Colors.white70, fontSize: 16, letterSpacing: 1)),
+                              const SizedBox(height: 16),
+                              Text(formatTime(seconds), style: const TextStyle(color: Colors.white, fontSize: 80, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 48),
+                              ElevatedButton(
+                                onPressed: () { t?.cancel(); Navigator.pop(context); },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white.withOpacity(0.15),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                                  elevation: 0,
+                                ),
+                                child: const Text('SKIP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 1)),
+                              )
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              );
+            }
+          );
+        }
+      ),
+    ).then((_) {
+      setState(() {
+        if (_activeSet < _totalSets) {
+          _activeSet++;
+        }
+      });
     });
   }
 
-  String _formatTime(int seconds) {
-    final m = (seconds ~/ 60).toString().padLeft(2, '0');
-    final s = (seconds % 60).toString().padLeft(2, '0');
-    return '$m:$s';
+  void _navigateToComplete() {
+    widget.exercise.isCompleted = true;
+    if (widget.onDone != null) widget.onDone!();
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const WorkoutCompleteScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
-    final isLastSet = _activeSet == widget.exercise.sets;
+    final isLastSet = _activeSet == _totalSets;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC),
@@ -75,7 +328,6 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Video Player Mock
               Container(
                 width: double.infinity,
                 height: 260,
@@ -91,14 +343,6 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                         child: IconButton(
                           icon: const Icon(Icons.chevron_left, color: Colors.white, size: 32),
                           onPressed: () => Navigator.pop(context),
-                        ),
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: IconButton(
-                          icon: const Icon(Icons.more_horiz, color: Colors.white, size: 28),
-                          onPressed: () {},
                         ),
                       ),
                       Container(
@@ -122,110 +366,90 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              
-              // Header
-              Text(
-                widget.exercise.name,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF121B28), letterSpacing: -0.5),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${widget.exercise.sets} Sets',
-                style: const TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 24),
-
-              // Notes from Trainer Box (Separated)
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isNotesExpanded = !_isNotesExpanded;
-                  });
-                },
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 24),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFEEEEEE)),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 2)),
-                    ]
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Notes from Trainer:', style: TextStyle(fontSize: 13, color: Colors.black54, fontWeight: FontWeight.w600)),
-                          Icon(_isNotesExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: Colors.black38),
+                           Text(
+                            widget.exercise.name,
+                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF121B28), letterSpacing: -0.5),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$_totalSets Sets',
+                            style: const TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.w600),
+                          ),
                         ],
                       ),
-                      AnimatedSize(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                        alignment: Alignment.topCenter,
-                        child: _isNotesExpanded 
-                          ? Column(
-                              children: [
-                                const SizedBox(height: 16),
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
-                                      child: const Icon(Icons.play_arrow, color: Colors.white, size: 18),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Stack(
-                                        children: [
-                                          Container(
-                                            height: 4,
-                                            width: double.infinity,
-                                            decoration: BoxDecoration(color: const Color(0xFFEEEEEE), borderRadius: BorderRadius.circular(2)),
-                                          ),
-                                          Container(
-                                            height: 4,
-                                            width: 40,
-                                            decoration: BoxDecoration(color: Theme.of(context).primaryColor, borderRadius: BorderRadius.circular(2)),
-                                          ),
-                                          Positioned(
-                                            left: 36,
-                                            top: -3,
-                                            child: Container(
-                                              width: 10,
-                                              height: 10,
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                shape: BoxShape.circle,
-                                                border: Border.all(color: Theme.of(context).primaryColor, width: 2),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'Keep shoulders loose and grip intact. Focus on the squeeze at the bottom of the movement. Make sure to drive through your heels and control the eccentric.',
-                                  style: TextStyle(color: Colors.black87, fontSize: 13, height: 1.4),
-                                ),
-                              ],
-                            )
-                          : const SizedBox.shrink(),
-                      ),
-                    ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: IconButton(
+                       icon: const Icon(Icons.more_horiz, color: Color(0xFF121B28), size: 28),
+                       onPressed: () => _showWorkoutOptions(context),
+                    ),
+                  ),
+                ],
+              ),
+             
+              const SizedBox(height: 24),
+              
+              // Notes from Trainer Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isNotesExpanded = !_isNotesExpanded;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.15)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Notes from Trainer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Theme.of(context).primaryColor)),
+                            Icon(_isNotesExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: Theme.of(context).primaryColor),
+                          ],
+                        ),
+                        AnimatedCrossFade(
+                          duration: const Duration(milliseconds: 300),
+                          crossFadeState: _isNotesExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+                          firstChild: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              SizedBox(height: 12, width: double.infinity),
+                              Text(
+                                'Keep shoulders loose and grip intact. Focus on the squeeze at the bottom of the movement.',
+                                style: TextStyle(color: Colors.black87, fontSize: 14, height: 1.5),
+                              ),
+                            ],
+                          ),
+                          secondChild: const SizedBox(width: double.infinity, height: 0),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
 
-              const SizedBox(height: 16),
-
-              // Sets Card
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 24),
                 decoration: BoxDecoration(
@@ -236,125 +460,174 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                     BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
                   ],
                 ),
-                clipBehavior: Clip.antiAlias, // Explicit clipping to fix any edge bleeding
+                clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
-                    // Tabs
                     Row(
-                      children: List.generate(widget.exercise.sets, (index) {
-                        final int setNum = index + 1;
-                        final bool isActive = _activeSet == setNum;
-                        final bool isCompleted = _completedSets.contains(setNum);
+                      children: [
+                        ...List.generate(_totalSets, (index) {
+                          final int setNum = index + 1;
+                          final bool isActive = _activeSet == setNum;
+                          final bool isCompleted = _completedSets.contains(setNum);
 
-                        return Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _activeSet = setNum;
-                              });
-                            },
-                            child: Container(
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: isCompleted ? Theme.of(context).primaryColor.withOpacity(0.12) : Colors.white,
-                                border: Border(
-                                  bottom: BorderSide(
-                                      color: isCompleted || isActive
-                                          ? Theme.of(context).primaryColor 
-                                          : const Color(0xFFEEEEEE),
-                                      width: isActive ? 3 : 1
+                          return Expanded(
+                            child: GestureDetector(
+                              onTap: null,
+                              child: Container(
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: isCompleted ? Theme.of(context).primaryColor.withOpacity(0.1) : (isActive ? Theme.of(context).primaryColor.withOpacity(0.85) : Colors.white),
+                                  border: Border(
+                                    bottom: BorderSide(
+                                        color: isCompleted || isActive
+                                            ? Theme.of(context).primaryColor
+                                            : const Color(0xFFEEEEEE),
+                                        width: isActive ? 3 : 1
+                                    ),
+                                    right: const BorderSide(color: Color(0xFFEEEEEE), width: 1),
                                   ),
-                                  right: BorderSide(color: const Color(0xFFEEEEEE), width: index < widget.exercise.sets - 1 ? 1 : 0),
                                 ),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                '$setNum',
-                                style: TextStyle(
-                                  fontSize: isActive ? 18 : 16,
-                                  fontWeight: isActive || isCompleted ? FontWeight.w800 : FontWeight.w600,
-                                  color: isActive || isCompleted ? const Color(0xFF121B28) : Colors.black45,
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '$setNum',
+                                  style: TextStyle(
+                                    fontSize: isActive ? 18 : 16,
+                                    fontWeight: isActive || isCompleted ? FontWeight.w800 : FontWeight.w600,
+                                    color: isActive ? Colors.white : (isCompleted ? const Color(0xFF121B28) : Colors.black45),
+                                  ),
                                 ),
                               ),
                             ),
+                          );
+                        }),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _showSetOptions(context),
+                            child: Container(
+                              height: 48,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE), width: 1)),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Icon(Icons.more_horiz, color: Color(0xFF121B28)),
+                            ),
                           ),
-                        );
-                      }),
+                        ),
+                      ],
                     ),
-                    // Set Details
                     Padding(
                       padding: const EdgeInsets.all(24),
                       child: Column(
                         children: [
-                          // Weight
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              _buildCounterBtn(Icons.remove, () => setState(() => _weight--)),
-                              SizedBox(
-                                width: 80,
-                                child: Text('$_weight', textAlign: TextAlign.center, style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w800, color: Color(0xFF121B28), height: 1.1)),
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    const Text('LAST ENTRY', style: TextStyle(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      height: 52,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: const Color(0xFFEEEEEE)),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: TextField(
+                                              controller: _weightController,
+                                              keyboardType: TextInputType.number,
+                                              textAlign: TextAlign.center,
+                                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF121B28)),
+                                              decoration: const InputDecoration(border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
+                                              scrollPadding: EdgeInsets.zero,
+                                            ),
+                                          ),
+                                          const Text('Kg', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w600, fontSize: 16)),
+                                        ],
+                                      ),
+                                    )
+                                  ],
+                                ),
                               ),
-                              _buildCounterBtn(Icons.add, () => setState(() => _weight++)),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16),
+                                child: Text('x', style: TextStyle(color: Colors.black26, fontSize: 18, fontWeight: FontWeight.w600)),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  children: [
+                                    const Text('TARGET', style: TextStyle(fontSize: 11, color: Colors.black38, fontWeight: FontWeight.w700, letterSpacing: 1.2)),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      height: 52,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: const Color(0xFFEEEEEE)),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: TextField(
+                                              controller: _repsController,
+                                              keyboardType: TextInputType.text,
+                                              textAlign: TextAlign.center,
+                                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF121B28)),
+                                              decoration: const InputDecoration(border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
+                                            ),
+                                          ),
+                                          const Text('Reps', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w600, fontSize: 16)),
+                                        ],
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
-                          // Toggle KG / LB
-                          Container(
-                            margin: const EdgeInsets.only(top: 8, bottom: 32),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF5F5F5),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildToggleText('KG', _isKg, () => setState(() => _isKg = true)),
-                                _buildToggleText('LB', !_isKg, () => setState(() => _isKg = false)),
-                              ],
-                            ),
-                          ),
-                          // Reps
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _buildCounterBtn(Icons.remove, () => setState(() => _reps--)),
-                              SizedBox(
-                                width: 80,
-                                child: Text('$_reps', textAlign: TextAlign.center, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w800, color: Color(0xFF121B28), height: 1.1)),
-                              ),
-                              _buildCounterBtn(Icons.add, () => setState(() => _reps++)),
-                            ],
-                          ),
-                          const Text('REPS', style: TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700, letterSpacing: 1)),
-                          
                           const SizedBox(height: 32),
-                          
-                          // Start Rest Timer
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                if (_restSecondsRemaining == 0) {
-                                  _startRestTimer();
-                                } else {
-                                  _restTimer?.cancel();
-                                  setState(() => _restSecondsRemaining = 0);
-                                }
-                              },
-                              icon: const Icon(Icons.timer_outlined, size: 20),
-                              label: Text(
-                                _restSecondsRemaining > 0 ? "Resting: ${_formatTime(_restSecondsRemaining)} - Tap to Cancel" : 'Start Rest Timer: 3 mins', 
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)
+                          Row(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(border: Border.all(color: const Color(0xFFEEEEEE)), borderRadius: BorderRadius.circular(12)),
+                                child: IconButton(icon: const Icon(Icons.help_outline, color: Color(0xFF121B28)), onPressed: () => _showHelpBottomSheet(context)),
                               ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: _restSecondsRemaining > 0 ? Theme.of(context).primaryColor : const Color(0xFF121B28),
-                                side: BorderSide(color: _restSecondsRemaining > 0 ? Theme.of(context).primaryColor : const Color(0xFFEEEEEE), width: 1.5),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                backgroundColor: const Color(0xFFFAFAFA),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: SizedBox(
+                                  height: 52,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      FocusScope.of(context).unfocus();
+                                      setState(() {
+                                        _completedSets.add(_activeSet);
+                                      });
+                                      if (isLastSet) {
+                                        _navigateToComplete();
+                                      } else {
+                                        if (_restTimerEnabled) {
+                                          _showRestTimerOverlay();
+                                        } else {
+                                          setState(() => _activeSet++);
+                                        }
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.85), 
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                                      elevation: 0,
+                                    ),
+                                    child: Text(isLastSet ? 'COMPLETE ALL' : 'NEXT', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
+                            ],
+                          )
                         ],
                       ),
                     ),
@@ -362,43 +635,14 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              // Next Set Button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _completedSets.add(_activeSet);
-                        if (!isLastSet) {
-                           _activeSet++;
-                        } else {
-                           widget.exercise.isCompleted = true;
-                           if (widget.onDone != null) widget.onDone!();
-                           Navigator.pop(context, true);
-                        }
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 0,
-                    ),
-                    child: Text(isLastSet ? 'Complete All' : 'Next Set →', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Message Trainer
+              
+              // Message Trainer Section
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Message Trainer:', style: TextStyle(fontSize: 13, color: Colors.black54, fontWeight: FontWeight.w700)),
+                    const Text('Message Trainer:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF6B6B83))),
                     const SizedBox(height: 8),
                     Container(
                       height: 56,
@@ -406,23 +650,31 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(28),
                         border: Border.all(color: const Color(0xFFEEEEEE), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2)),
+                        ],
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.only(left: 20, right: 6),
                       child: Row(
                         children: [
                           const Expanded(
                             child: TextField(
                               decoration: InputDecoration(
                                 hintText: 'Ask your trainer something...',
-                                hintStyle: TextStyle(color: Colors.black38, fontSize: 14, fontWeight: FontWeight.w500),
+                                hintStyle: TextStyle(color: Colors.black54, fontSize: 16, fontWeight: FontWeight.w400),
                                 border: InputBorder.none,
+                                isDense: true,
                               ),
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: Theme.of(context).primaryColor, shape: BoxShape.circle),
-                            child: const Icon(Icons.play_arrow, color: Colors.white, size: 16),
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).primaryColor.withOpacity(0.85), 
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.play_arrow, color: Colors.white, size: 24),
                           ),
                         ],
                       ),
@@ -430,7 +682,70 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 32),
+              
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text('Personal Best', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF121B28))),
+                        Text('09/10/24', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black45)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.85), 
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: const [
+                          Text('8 REPS', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                          Text('7.5 KG', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text('Last entry', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF121B28))),
+                        Text('View all >', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF121B28))),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: const Text('27/11/2025', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black45)),
+                    ),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFEEEEEE)),
+                      ),
+                      child: Column(
+                        children: [
+                          _buildHistoryRow(1, '4.5 Kg', '12 Reps'),
+                          _buildHistoryRow(2, '4.5 Kg', '8 Reps'),
+                          _buildHistoryRow(3, '4.5 Kg', '8 Reps'),
+                          _buildHistoryRow(4, '4.5 Kg', '8 Reps', isLast: true),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 48),
             ],
           ),
         ),
@@ -438,40 +753,19 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
     );
   }
 
-  Widget _buildCounterBtn(IconData icon, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: 44,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFEEEEEE)),
-        ),
-        child: Icon(icon, color: Colors.black38, size: 20),
+  Widget _buildHistoryRow(int setNum, String weight, String reps, {bool isLast = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: isLast ? Colors.transparent : const Color(0xFFEEEEEE), width: 1)),
       ),
-    );
-  }
-
-  Widget _buildToggleText(String label, bool isActive, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? Theme.of(context).primaryColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            color: isActive ? Colors.white : Colors.black38,
-          ),
-        ),
+      child: Row(
+        children: [
+          SizedBox(width: 40, child: Text('$setNum', style: const TextStyle(fontSize: 16, color: Color(0xFF121B28), fontWeight: FontWeight.w600))),
+          Container(width: 1, height: 24, color: const Color(0xFFEEEEEE)),
+          const SizedBox(width: 16),
+          Expanded(child: Text('$weight x $reps', style: const TextStyle(fontSize: 16, color: Color(0xFF121B28), fontWeight: FontWeight.w500))),
+        ],
       ),
     );
   }
