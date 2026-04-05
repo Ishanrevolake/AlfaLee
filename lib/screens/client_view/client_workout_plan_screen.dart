@@ -1,108 +1,128 @@
 import 'package:flutter/material.dart';
 import '../workouts/workout_day_detail_screen.dart';
-import '../../services/mock_data_service.dart';
-import 'package:intl/intl.dart';
 
 class ClientWorkoutPlanScreen extends StatelessWidget {
   const ClientWorkoutPlanScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, String>> split = [
-      {'day': 'Monday', 'focus': 'Upper Body Power', 'exercises': '6'},
-      {'day': 'Tuesday', 'focus': 'Lower Body Power', 'exercises': '5'},
-      {'day': 'Wednesday', 'focus': 'Rest / Active Recovery', 'exercises': '0'},
-      {'day': 'Thursday', 'focus': 'Upper Body Hypertrophy', 'exercises': '7'},
-      {'day': 'Friday', 'focus': 'Lower Body Hypertrophy', 'exercises': '6'},
-    ];
-
-    final String today = DateFormat('EEEE').format(DateTime.now());
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('MY TRAINING PLAN', style: TextStyle(letterSpacing: 1.5, fontWeight: FontWeight.w400, fontSize: 13)),
-        centerTitle: true,
-      ),
+      backgroundColor: const Color(0xFFF9FAFC),
       body: SafeArea(
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: split.length,
-          itemBuilder: (context, index) {
-            final day = split[index];
-            final bool isRest = day['focus']!.contains('Rest');
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFEEEEEE)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            children: [
+              const SizedBox(height: 60),
+              const Center(
+                child: Text(
+                  'WELL DONE ISHAN!',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF121B28), // Dark Navy
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-                onTap: isRest ? null : () {
+              const SizedBox(height: 32),
+              GestureDetector(
+                onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => WorkoutDayDetailScreen(dayData: day, isReadOnly: true),
+                      builder: (context) => const WorkoutDayDetailScreen(
+                        dayData: {'day': 'Today', 'focus': 'Lower Body Build'},
+                        isReadOnly: true,
+                      ),
                     ),
                   );
                 },
-                leading: Container(
-                  width: 4,
-                  height: 40,
+                child: Container(
+                  height: 96,
                   decoration: BoxDecoration(
-                    color: isRest ? Colors.black12 : const Color(0xFFDC143C),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                title: Row(
-                  children: [
-                    Text(day['day']!, style: const TextStyle(fontWeight: FontWeight.w400, fontSize: 15)),
-                    if (day['day'] == 'Monday') // Hardcoded for demo as "Today"
-                      Container(
-                        margin: const EdgeInsets.only(left: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDC143C),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text('TODAY', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w400)),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
-                  ],
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(day['focus']!, style: TextStyle(color: isRest ? Colors.black38 : Colors.black87, fontSize: 12, fontWeight: FontWeight.w300)),
-                    if (!isRest) ...[
-                      const SizedBox(height: 10),
-                      Row(
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      // Left Image with Tick overlay
+                      Stack(
                         children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(2),
-                              child: LinearProgressIndicator(
-                                value: MockDataService.getWorkoutDoneCount(day['day']!) / double.parse(day['exercises']!),
-                                backgroundColor: const Color(0xFFEEEEEE),
-                                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFDC143C)),
-                                minHeight: 2,
-                              ),
+                          ClipRRect(
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              bottomLeft: Radius.circular(20),
+                            ),
+                            child: Container(
+                              width: 100,
+                              height: 96,
+                              color: const Color(0xFFE2E8F0),
+                              child: const Icon(Icons.accessibility_new, color: Colors.black12, size: 50),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Text(
-                            '${MockDataService.getWorkoutDoneCount(day['day']!)}/${day['exercises']} done',
-                            style: const TextStyle(color: Colors.black38, fontSize: 9, fontWeight: FontWeight.w300),
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).primaryColor, // using app theme primary
+                                borderRadius: const BorderRadius.only(
+                                  topRight: Radius.circular(16),
+                                  bottomLeft: Radius.circular(20),
+                                ),
+                              ),
+                              child: const Icon(Icons.check, color: Colors.white, size: 16),
+                            ),
                           ),
                         ],
                       ),
+                      const SizedBox(width: 16),
+                      // Middle Text Content
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Lower Body Build',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF121B28),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'With Maddie | 30-45 mins',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade500,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Right Chevron
+                      Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: Icon(Icons.chevron_right, color: Colors.black87, size: 24),
+                      ),
                     ],
-                  ],
+                  ),
                 ),
-                trailing: isRest ? null : const Icon(Icons.chevron_right, color: Colors.black12, size: 16),
               ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );

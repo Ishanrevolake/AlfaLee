@@ -1,154 +1,240 @@
 import 'package:flutter/material.dart';
 import '../../models/fitness_models.dart';
-import '../../services/mock_data_service.dart';
 import 'exercise_detail_screen.dart';
 
 class WorkoutDayDetailScreen extends StatefulWidget {
-  final Map<String, String> dayData;
+  final Map<String, String>? dayData;
   final bool isReadOnly;
 
-  const WorkoutDayDetailScreen({super.key, required this.dayData, this.isReadOnly = false});
+  const WorkoutDayDetailScreen({super.key, this.dayData, this.isReadOnly = false});
 
   @override
   State<WorkoutDayDetailScreen> createState() => _WorkoutDayDetailScreenState();
 }
 
 class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
-  final List<Exercise> _exercises = [
-    Exercise(name: 'Bench Press', sets: 4, reps: 8, weight: '80kg'),
-    Exercise(name: 'Incline DB Press', sets: 3, reps: 12, weight: '30kg'),
-    Exercise(name: 'Lat Pulldown', sets: 4, reps: 10, weight: '65kg'),
+  final List<Map<String, dynamic>> _sections = [
+    {
+      'title': 'Warm Up',
+      'hasSkip': true,
+      'isSkipActive': false,
+      'trailingIcon': null,
+      'exercises': [
+        {'name': 'Deep Squat To Extension', 'desc': '2 ROUNDS | 20 SECONDS', 'isCompleted': false},
+        {'name': 'Low Lateral Lunge', 'desc': '2 ROUNDS | 20 SECONDS', 'isCompleted': false},
+        {'name': 'Hip 90/90s', 'desc': '2 ROUNDS | 20 SECONDS', 'isCompleted': false},
+        {'name': 'Resistance Band Kick Backs', 'desc': '2 ROUNDS | 20 SECONDS EACH SIDE', 'isCompleted': false},
+      ],
+    },
+    {
+      'title': 'Superset',
+      'hasSkip': false,
+      'trailingIcon': Icons.help_outline,
+      'exercises': [
+        {'name': 'Dumbbell RDL Deadlift', 'desc': '4 SETS | 10 REPS', 'isCompleted': false},
+        {'name': 'Dumbbell Sumo Squat', 'desc': '4 SETS | 10 REPS', 'isCompleted': false},
+        {'name': 'Leg Press', 'desc': '3 SETS | 12 REPS', 'isCompleted': false},
+        {'name': 'Walking Lunges', 'desc': '3 SETS | 20 STEPS', 'isCompleted': false},
+        {'name': 'Seated Calf Raises', 'desc': '4 SETS | 15 REPS', 'isCompleted': false},
+      ],
+    }
   ];
+
+  bool _isExerciseActive(Map<String, dynamic> targetEx) {
+    for (var section in _sections) {
+      if (section['isSkipActive'] == true) continue;
+      for (var ex in section['exercises']) {
+        if (ex['isCompleted'] != true) {
+          return ex == targetEx;
+        }
+      }
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFF9FAFC),
       appBar: AppBar(
-        title: Text('${widget.dayData['day']!.toUpperCase()} - ${widget.dayData['focus']!.toUpperCase()}', 
-          style: const TextStyle(fontSize: 13, letterSpacing: 1, fontWeight: FontWeight.w400)),
+        backgroundColor: const Color(0xFFF9FAFC),
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: IconButton(
+            icon: const Icon(Icons.chevron_left, color: Color(0xFF121B28), size: 30),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        title: const Text(
+          'Lower Body Build',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF121B28),
+          ),
+        ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.ios_share, color: Color(0xFF121B28), size: 22),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.more_horiz, color: Color(0xFF121B28), size: 24),
+            onPressed: () {},
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
-        child: _exercises.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.fitness_center, size: 64, color: const Color(0xFFEEEEEE)),
-                  const SizedBox(height: 16),
-                  const Text('No exercises added yet', style: TextStyle(color: Colors.black54)),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _exercises.length + 1,
-              itemBuilder: (context, index) {
-                if (index == _exercises.length) {
-                  return const SizedBox(height: 40); // Bottom padding
-                }
-                final exercise = _exercises[index];
-                return _buildExerciseCard(exercise);
-              },
-            ),
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          itemCount: _sections.length,
+          itemBuilder: (context, index) {
+            return _buildSection(_sections[index]);
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildExerciseCard(Exercise exercise) {
-    IconData exerciseIcon = Icons.fitness_center;
-    if (exercise.name.contains('Press')) exerciseIcon = Icons.unfold_more;
-    if (exercise.name.contains('Lat')) exerciseIcon = Icons.back_hand;
-    if (exercise.name.contains('Squat')) exerciseIcon = Icons.airline_seat_legroom_extra;
-
-    final int setsRemaining = exercise.isCompleted ? 0 : exercise.sets;
-    final int repsRemaining = exercise.isCompleted ? 0 : (exercise.sets * exercise.reps);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: exercise.isCompleted ? const Color(0xFF66BB6A).withOpacity(0.3) : const Color(0xFFEEEEEE)
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  Widget _buildSection(Map<String, dynamic> section) {
+    final List exercises = section['exercises'];
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: exercise.isCompleted ? const Color(0xFF66BB6A).withOpacity(0.1) : const Color(0xFFEEEEEE),
-                  borderRadius: BorderRadius.circular(16),
+              Text(
+                section['title'],
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF121B28),
                 ),
-                child: Icon(exerciseIcon, color: exercise.isCompleted ? const Color(0xFF66BB6A) : Colors.black87, size: 24),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(exercise.name, 
-                      style: const TextStyle(fontWeight: FontWeight.w400, fontSize: 16, color: Colors.black)),
-                    const SizedBox(height: 4),
-                    Text(
-                      exercise.isCompleted 
-                        ? 'All sets completed' 
-                        : '$setsRemaining sets / $repsRemaining reps to go',
-                      style: TextStyle(
-                        color: exercise.isCompleted ? const Color(0xFF66BB6A).withOpacity(0.5) : Colors.black87, 
-                        fontSize: 13
+              Row(
+                children: [
+                  if (section['hasSkip'] == true) ...[
+                    const Text('SKIP', style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      height: 24,
+                      width: 40,
+                      child: Switch(
+                        value: section['isSkipActive'] ?? false,
+                        onChanged: (val) {
+                          setState(() {
+                            section['isSkipActive'] = val;
+                          });
+                        },
+                        activeColor: Theme.of(context).primaryColor,
                       ),
                     ),
                   ],
-                ),
+                  if (section['trailingIcon'] != null) ...[
+                    Icon(section['trailingIcon'], color: Colors.black54, size: 20),
+                  ]
+                ],
               ),
-              if (exercise.isCompleted)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF66BB6A),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text('DONE', 
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w400, fontSize: 10)),
-                ),
             ],
           ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () async {
-                final bool wasCompleted = exercise.isCompleted;
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ExerciseDetailScreen(exercise: exercise),
-                  ),
+        ),
+        if (exercises.isNotEmpty && section['isSkipActive'] != true)
+          Container(
+            color: Colors.white,
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: exercises.length,
+              separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFEEEEEE), indent: 80),
+              itemBuilder: (context, index) {
+                final ex = exercises[index];
+                final isActive = _isExerciseActive(ex);
+                return Stack(
+                  children: [
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      leading: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5F5F5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ex['isCompleted'] == true 
+                            ? Icon(Icons.check_circle, color: Theme.of(context).primaryColor)
+                            : const Icon(Icons.fitness_center, color: Colors.black26),
+                      ),
+                      title: Text(
+                        ex['name'],
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Color(0xFF121B28)),
+                      ),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          ex['desc'],
+                          style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      trailing: ex['isCompleted'] == true 
+                          ? Text('DONE', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w700, fontSize: 11))
+                          : const Icon(Icons.more_horiz, color: Colors.black38),
+                      onTap: () async {
+                        // Navigate to exercise detail screen and await true response
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ExerciseDetailScreen(
+                              exercise: Exercise(
+                                name: ex['name'],
+                                sets: 4,
+                                reps: 10,
+                              ),
+                              onDone: () {
+                                setState(() {
+                                  ex['isCompleted'] = true;
+                                });
+                              },
+                            ),
+                          ),
+                        );
+                        if (result == true) {
+                          setState(() {
+                            ex['isCompleted'] = true;
+                          });
+                        }
+                      },
+                    ),
+                    if (isActive || ex['isCompleted'] == true)
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 4,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor,
+                            borderRadius: const BorderRadius.only(
+                              topRight: Radius.circular(4),
+                              bottomRight: Radius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 );
-                if (!wasCompleted && exercise.isCompleted) {
-                  MockDataService.incrementWorkoutDone(widget.dayData['day']!);
-                }
-                setState(() {}); // Refresh to show completed state
               },
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: exercise.isCompleted ? Colors.black38 : const Color(0xFFDC143C)),
-                foregroundColor: exercise.isCompleted ? Colors.black87 : const Color(0xFFDC143C),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(exercise.isCompleted ? 'VIEW DETAILS' : 'START EXERCISE', 
-                style: const TextStyle(fontWeight: FontWeight.w400, letterSpacing: 1, fontSize: 12)),
             ),
           ),
-        ],
-      ),
+        if (exercises.isEmpty)
+          const Divider(height: 1, color: Color(0xFFEEEEEE)), // Bottom border for empty sections
+      ],
     );
   }
 }
