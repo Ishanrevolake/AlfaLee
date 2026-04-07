@@ -20,7 +20,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
   final TextEditingController _weightController = TextEditingController(text: '4.5');
   final TextEditingController _repsController = TextEditingController(text: '8-10');
 
-  bool _isNotesExpanded = true;
+
   final Set<int> _completedSets = {};
   
   bool _restTimerEnabled = true;
@@ -400,55 +400,6 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
              
               const SizedBox(height: 24),
               
-              // Notes from Trainer Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _isNotesExpanded = !_isNotesExpanded;
-                    });
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.04),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.15)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Notes from Trainer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Theme.of(context).primaryColor)),
-                            Icon(_isNotesExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: Theme.of(context).primaryColor),
-                          ],
-                        ),
-                        AnimatedCrossFade(
-                          duration: const Duration(milliseconds: 300),
-                          crossFadeState: _isNotesExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-                          firstChild: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              SizedBox(height: 12, width: double.infinity),
-                              Text(
-                                'Keep shoulders loose and grip intact. Focus on the squeeze at the bottom of the movement.',
-                                style: TextStyle(color: Colors.black87, fontSize: 14, height: 1.5),
-                              ),
-                            ],
-                          ),
-                          secondChild: const SizedBox(width: double.infinity, height: 0),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
 
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -634,54 +585,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              
-              // Message Trainer Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Message Trainer:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF6B6B83))),
-                    const SizedBox(height: 8),
-                    Container(
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: const Color(0xFFEEEEEE), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2)),
-                        ],
-                      ),
-                      padding: const EdgeInsets.only(left: 20, right: 6),
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: TextField(
-                              decoration: InputDecoration(
-                                hintText: 'Ask your trainer something...',
-                                hintStyle: TextStyle(color: Colors.black54, fontSize: 16, fontWeight: FontWeight.w400),
-                                border: InputBorder.none,
-                                isDense: true,
-                              ),
-                            ),
-                          ),
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).primaryColor.withOpacity(0.85), 
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.play_arrow, color: Colors.white, size: 24),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+
               const SizedBox(height: 32),
               
               Padding(
